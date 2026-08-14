@@ -1,0 +1,9 @@
+{
+  "name": "info-feed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "通用 RSS 信息流时间线 —— awesome-agent 样例项目(零依赖)",
+  "scripts": { "start": "node server.mjs" },
+  "engines": { "node": ">=22" }
+}

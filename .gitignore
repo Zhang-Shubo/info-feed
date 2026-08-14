@@ -1,0 +1,11 @@
+# 拷成 .gitignore。铁律:真实配置与数据永不入库。
+.DS_Store
+node_modules/
+.venv/
+config.env
+.env
+.env.local
+data/
+*.db
+*.db-wal
+*.db-shm
