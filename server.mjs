@@ -65,7 +65,8 @@ function parseFeed(xml) {
     const link = decode(tag(b, "link")) || (atomLink ? atomLink[1] : "");
     const timeRaw = tag(b, "pubDate") || tag(b, "published") || tag(b, "updated") || tag(b, "dc:date");
     const t = Date.parse(decode(timeRaw));
-    if (title && link) items.push({ title, link, time: Number.isFinite(t) ? t : null });
+    const desc = decode(tag(b, "description") || tag(b, "summary") || tag(b, "content")).slice(0, 240);
+    if (title && link) items.push({ title, link, desc, time: Number.isFinite(t) ? t : null });
   }
   return items;
 }

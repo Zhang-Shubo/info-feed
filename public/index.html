@@ -3,98 +3,205 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>info-feed · 信息流</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>消息流</title>
+<link rel="icon" href="/favicon.svg">
 <style>
-  :root {
-    --bg: #f6f7f9; --card: #fff; --text: #1a1d21; --muted: #6b7280;
-    --border: #e5e7eb; --accent: #7c3aed; --warn: #d97706; --warn-bg: #fffbeb;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #101317; --card: #181c22; --text: #e7eaee; --muted: #9aa3af;
-      --border: #2a3038; --accent: #a78bfa; --warn: #fbbf24; --warn-bg: #2b2110;
-    }
-  }
-  * { box-sizing: border-box; margin: 0; }
-  body { background: var(--bg); color: var(--text); font: 15px/1.65 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 64px; }
-  h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  h1 img { width: 26px; height: 26px; border-radius: 6px; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-  .chips button { border: 1px solid var(--border); background: var(--card); color: var(--muted);
-    border-radius: 999px; padding: 3px 13px; font-size: 13px; cursor: pointer; }
-  .chips button.on { border-color: var(--accent); color: var(--accent); }
-  .warn { color: var(--warn); background: var(--warn-bg); border-radius: 10px;
-    padding: 8px 14px; font-size: 13px; margin-bottom: 14px; }
-  .day { margin: 22px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600;
-    display: flex; align-items: center; gap: 10px; }
-  .day::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-  .item { display: flex; gap: 12px; padding: 7px 0; align-items: baseline; }
-  .item time { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; width: 42px; }
-  .item .src { flex: none; font-size: 12px; color: var(--accent); border: 1px solid var(--border);
-    border-radius: 6px; padding: 0 7px; white-space: nowrap; }
-  .item a { color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
-  .item a:hover { color: var(--accent); }
-  .empty { color: var(--muted); border: 1px dashed var(--border); border-radius: 12px;
-    padding: 40px; text-align: center; margin-top: 20px; }
-  footer { margin-top: 30px; color: var(--muted); font-size: 12px; }
+/* 与 awesome-agent 主页同一套玻璃拟态皮肤:光斑背景 + rgba+blur 玻璃 + 细描边。
+   亮暗双模式,data-theme 切换,localStorage 记忆。 */
+:root {
+  --bg: #f6f7fb;
+  --text: #0e1116;
+  --muted: rgba(14, 17, 22, 0.55);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --hairline: rgba(14, 17, 22, 0.1);
+  --shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+  --pill-on-bg: #0e1116; --pill-on-fg: #ffffff;
+  --blob-a: #c7d2fe; --blob-b: #fbcfe8; --blob-c: #a5f3fc;
+  --green: #16a34a;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0e14;
+  --text: #f1f4f8;
+  --muted: rgba(235, 235, 245, 0.58);
+  --glass: rgba(22, 26, 34, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --hairline: rgba(255, 255, 255, 0.12);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --pill-on-bg: #f1f4f8; --pill-on-fg: #0e1116;
+  --blob-a: #312e81; --blob-b: #701a4d; --blob-c: #164e63;
+  --green: #4ade80;
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 500 16px/1.6 Inter, -apple-system, "PingFang SC", system-ui, sans-serif;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; filter: blur(70px) saturate(120%); }
+.aurora i { position: absolute; border-radius: 50%; opacity: 0.55; }
+.aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -8vw; top: -18vh; background: var(--blob-a); }
+.aurora i:nth-child(2) { width: 38vw; height: 38vw; right: -6vw; top: 10vh; background: var(--blob-b); }
+.aurora i:nth-child(3) { width: 42vw; height: 42vw; left: 24vw; bottom: -22vh; background: var(--blob-c); }
+
+.wrap { max-width: 980px; margin: 0 auto; padding: 36px clamp(20px, 4vw, 48px) 72px; }
+
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.stat { font-size: 14px; color: var(--muted); }
+.stat b { color: var(--green); font-weight: 700; }
+
+/* 源筛选 chips */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
+.chip {
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px;
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  padding: 7px 15px; font-size: 13.5px; font-weight: 500; cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chip .n { color: var(--muted); font-weight: 400; }
+.chip.on { background: var(--pill-on-bg); color: var(--pill-on-fg); border-color: transparent; }
+.chip.on .n { color: inherit; opacity: 0.65; }
+.chip.err { opacity: 0.75; }
+
+/* 按天分组 */
+.day-head { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 18px; padding-left: 4px; }
+.day-head b { font-size: 19px; font-weight: 700; }
+.day-head span { font-size: 13.5px; color: var(--muted); }
+
+/* 时间线:时刻 + 彩点 + 竖线 + 玻璃卡 */
+.rows { position: relative; }
+.rows::before { content: ""; position: absolute; left: 79px; top: 8px; bottom: 8px; width: 1px; background: var(--hairline); }
+.row { display: grid; grid-template-columns: 56px 16px 1fr; gap: 14px; align-items: start; margin-bottom: 20px; }
+.row .t { text-align: right; font-size: 13px; color: var(--muted); padding-top: 20px; font-variant-numeric: tabular-nums; }
+.row .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 25px; position: relative; z-index: 1;
+  box-shadow: 0 0 0 3px var(--bg); }
+
+.card {
+  display: block; background: var(--glass);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 18px 22px; transition: transform 0.15s ease;
+}
+.card:hover { transform: translateY(-2px); }
+.src { display: flex; align-items: center; gap: 10px; }
+.ava { width: 28px; height: 28px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex: none; }
+.src b { font-size: 15px; font-weight: 600; }
+.title { font-size: 17px; font-weight: 700; line-height: 1.5; margin-top: 10px; overflow-wrap: anywhere; }
+.desc { font-size: 14px; font-weight: 400; color: var(--muted); margin-top: 8px; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.notice { margin: 40px 0; text-align: center; color: var(--muted); font-size: 14px; }
+
+/* 右下角亮暗切换 */
+.theme-btn {
+  position: fixed; right: 24px; bottom: 24px; z-index: 30;
+  width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--glass-border);
+  background: var(--glass); -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%); box-shadow: var(--shadow);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+@media (max-width: 640px) {
+  .rows::before { display: none; }
+  .row { grid-template-columns: 1fr; gap: 6px; }
+  .row .t { text-align: left; padding: 0 0 0 4px; }
+  .row .dot { display: none; }
+}
 </style>
 </head>
 <body>
+<div class="aurora"><i></i><i></i><i></i></div>
 <div class="wrap">
-  <h1><img src="/favicon.svg" alt="">信息流</h1>
-  <div class="sub">按时间倒序聚合 config.env 里配置的 RSS/Atom 源 —— awesome-agent 样例项目。</div>
+  <header>
+    <h1>消息流</h1>
+    <div class="stat">共 <b id="total">0</b> 条 · 每 60s 刷新</div>
+  </header>
   <div class="chips" id="chips"></div>
-  <div class="warn" id="warn" hidden></div>
-  <div id="list"></div>
-  <div class="empty" id="empty" hidden>暂无条目 —— 检查 config.env 里的 FEEDS 配置。</div>
-  <footer id="asof"></footer>
+  <main id="timeline"><div class="notice">加载中…</div></main>
 </div>
+<button class="theme-btn" id="theme" title="切换亮暗模式">🌙</button>
 <script>
-let cur = ''  // '' = 全部
-const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+const $ = (s) => document.querySelector(s)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
-function dayLabel(t) {
-  const d = new Date(t), now = new Date()
-  const day = x => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`
-  if (day(d) === day(now)) return '今天'
-  const y = new Date(now); y.setDate(now.getDate() - 1)
-  if (day(d) === day(y)) return '昨天'
-  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
+// ── 亮暗切换:data-theme + localStorage,默认亮色 ──
+const applyTheme = (t) => {
+  document.documentElement.dataset.theme = t
+  $('#theme').textContent = t === 'dark' ? '☀️' : '🌙'
+  localStorage.setItem('feed-theme', t)
+}
+applyTheme(localStorage.getItem('feed-theme') || 'light')
+$('#theme').onclick = () =>
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+
+// ── 源 → 颜色:名字哈希取色,头像与时间线圆点同色 ──
+const PALETTE = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#3b82f6', '#ec4899', '#06b6d4', '#f97316']
+const color = (name) => PALETTE[[...name].reduce((a, c) => a + c.codePointAt(0), 0) % PALETTE.length]
+
+let active = ''  // 当前源筛选,空 = 全部
+
+const WEEK = ['日', '一', '二', '三', '四', '五', '六']
+function dayLabel(d) {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const that = new Date(d); that.setHours(0, 0, 0, 0)
+  const diff = (today - that) / 86400000
+  const rel = diff === 0 ? '今天' : diff === 1 ? '昨天' : ''
+  return { date: `${d.getMonth() + 1}月${d.getDate()}日`, sub: `${rel ? rel + ' · ' : ''}星期${WEEK[d.getDay()]}` }
+}
+const hhmm = (t) => t ? new Date(t).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
+
+function render(d) {
+  $('#total').textContent = d.items.length
+  // chips:全部 + 每源(计数;拉取失败的标 ⚠ 并保留旧数据,诚实提示)
+  const chips = [{ name: '', label: '全部', count: d.sources.reduce((a, s) => a + s.count, 0) },
+    ...d.sources.map((s) => ({ name: s.name, label: s.name, count: s.count, error: s.error }))]
+  $('#chips').innerHTML = chips.map((c) =>
+    `<span class="chip ${active === c.name ? 'on' : ''} ${c.error ? 'err' : ''}"
+      data-name="${esc(c.name)}" ${c.error ? `title="拉取失败,显示旧数据: ${esc(c.error)}"` : ''}>
+      ${esc(c.label)}${c.error ? ' ⚠' : ''} <span class="n">${c.count}</span></span>`).join('')
+  document.querySelectorAll('.chip').forEach((el) =>
+    el.onclick = () => { active = el.dataset.name; load() })
+
+  if (!d.items.length) { $('#timeline').innerHTML = '<div class="notice">暂无条目</div>'; return }
+  // 按天分组
+  const days = new Map()
+  for (const it of d.items) {
+    const key = it.time ? new Date(it.time).toDateString() : '未知时间'
+    if (!days.has(key)) days.set(key, [])
+    days.get(key).push(it)
+  }
+  $('#timeline').innerHTML = [...days.entries()].map(([key, items]) => {
+    const head = key === '未知时间'
+      ? `<div class="day-head"><b>未知时间</b><span>${items.length} 条</span></div>`
+      : (() => { const l = dayLabel(new Date(key));
+          return `<div class="day-head"><b>${l.date}</b><span>${l.sub} · ${items.length} 条</span></div>` })()
+    const rows = items.map((it) => `
+      <div class="row">
+        <div class="t">${hhmm(it.time)}</div>
+        <div class="dot" style="background:${color(it.source)}"></div>
+        <a class="card" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">
+          <div class="src"><span class="ava" style="background:${color(it.source)}">${esc([...it.source][0])}</span><b>${esc(it.source)}</b></div>
+          <div class="title">${esc(it.title)}</div>
+          ${it.desc ? `<div class="desc">${esc(it.desc)}</div>` : ''}
+        </a>
+      </div>`).join('')
+    return head + `<div class="rows">${rows}</div>`
+  }).join('')
 }
 
 async function load() {
-  const q = cur ? `?source=${encodeURIComponent(cur)}` : ''
-  const { items, sources, asOf } = await (await fetch('/api/timeline' + q)).json()
-
-  // 源筛选 chips(含各源条数)
-  document.getElementById('chips').innerHTML =
-    [`<button class="${cur?'':'on'}" onclick="cur='';load()">全部</button>`,
-     ...sources.map(s => `<button class="${cur===s.name?'on':''}"
-        onclick="cur='${esc(s.name)}';load()">${esc(s.name)} ${s.count}</button>`)].join('')
-
-  // 诚实: 拉取失败的源如实提示, 不隐藏不编造
-  const bad = sources.filter(s => s.error)
-  const warn = document.getElementById('warn')
-  warn.hidden = !bad.length
-  if (bad.length) warn.textContent = '⚠ 数据源暂不可用: ' + bad.map(s => `${s.name}(${s.error})`).join(' · ')
-
-  // 按日分组渲染
-  let html = '', lastDay = ''
-  for (const it of items) {
-    const label = it.time ? dayLabel(it.time) : '未知时间'
-    if (label !== lastDay) { html += `<div class="day">${label}</div>`; lastDay = label }
-    const hm = it.time ? new Date(it.time).toTimeString().slice(0, 5) : '--:--'
-    html += `<div class="item"><time>${hm}</time><span class="src">${esc(it.source)}</span>
-      <a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a></div>`
+  try {
+    const r = await fetch('/api/timeline' + (active ? `?source=${encodeURIComponent(active)}` : ''))
+    render(await r.json())
+  } catch (e) {
+    $('#timeline').innerHTML = `<div class="notice">加载失败:${esc(e.message || e)}</div>`
   }
-  document.getElementById('list').innerHTML = html
-  document.getElementById('empty').hidden = items.length > 0
-  document.getElementById('asof').textContent = `数据截至 ${new Date(asOf).toLocaleString()} · 条目时间与链接均来自源站,可溯源`
 }
 load()
+setInterval(load, 60000)
 </script>
 </body>
 </html>
